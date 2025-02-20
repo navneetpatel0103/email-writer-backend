@@ -1,21 +1,21 @@
-# Use Eclipse Temurin JDK 21 as base image since your project uses Java 21
+# Use Eclipse Temurin JDK 21 as base image
 FROM eclipse-temurin:21-jdk
 
 # Set the working directory inside the container
 WORKDIR /app
 
-# Copy Maven Wrapper and POM file
-COPY mvnw pom.xml ./
-COPY .mvn/ .mvn
+# Install Maven
+RUN apt-get update && apt-get install -y maven
 
-# Download dependencies first (caching)
-RUN ./mvnw dependency:go-offline
+# Copy POM file and download dependencies (caching)
+COPY pom.xml ./
+RUN mvn dependency:go-offline
 
 # Copy the entire project into the container
 COPY . .
 
-# Build the application
-RUN ./mvnw clean package -DskipTests
+# Build the application (skip tests for faster build)
+RUN mvn clean package -DskipTests
 
 # Copy the built JAR file to the final location
 RUN cp target/*.jar app.jar
