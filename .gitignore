@@ -1,5 +1,4 @@
 HELP.md
-target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
@@ -33,7 +32,6 @@ build/
 .vscode/
 
 # Ignore compiled files and logs
-*.jar
 *.war
 *.class
 
@@ -44,7 +42,5 @@ build/
 # Ignore OS system files
 .DS_Store
 Thumbs.db
-
-src/main/resources/application.properties
 
 
