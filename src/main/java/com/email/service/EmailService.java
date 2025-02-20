@@ -1,6 +1,10 @@
 package com.email.service;
 
+import java.util.Map;
+
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -9,10 +13,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import reactor.core.publisher.Mono;
-
-import java.util.Map;
-
-import org.apache.commons.lang3.StringUtils;
 
 @Service
 public class EmailService {
@@ -36,16 +36,20 @@ public class EmailService {
 				new Object[] { Map.of("parts", new Object[] { Map.of("text", prompt) }) });
 
 		// do request and get response
-		String response = webClient.post()
-				.uri(geminiApiUrl + geminiApiKey)
-				.header("Content-Type", "application/json")
-				.bodyValue(requestBody).retrieve()
-				.onStatus(status -> status.is4xxClientError(),
-						res -> Mono.error(new RuntimeException("Client Error! Check your request")))
-				.onStatus(status -> status.is5xxServerError(),
-						res -> Mono.error(new RuntimeException("Server error! Try again later.")))
-				.bodyToMono(String.class)
-				.block();
+		String response = webClient.post().uri(geminiApiUrl + geminiApiKey).header("Content-Type", "application/json")
+				.bodyValue(requestBody).retrieve().onStatus(HttpStatusCode::is4xxClientError,
+						clientResponse -> clientResponse.bodyToMono(String.class).flatMap(errorBody -> {
+							System.out.println("Client Error: " + errorBody);
+							return Mono.error(new RuntimeException("Client Error! Status: "
+									+ clientResponse.statusCode() + ", Response: " + errorBody));
+						}))
+				.onStatus(HttpStatusCode::is5xxServerError,
+						clientResponse -> clientResponse.bodyToMono(String.class).flatMap(errorBody -> {
+							System.out.println("Server Error: " + errorBody);
+							return Mono.error(new RuntimeException("Server Error! Status: "
+									+ clientResponse.statusCode() + ", Response: " + errorBody));
+						}))
+				.bodyToMono(String.class).block();
 		
 		// extract response and return 
 		return extractResponseContent(response);
